@@ -24,3 +24,4 @@ int8_t sendData(uint8_t id, char *data, uint8_t size);
 
 int8_t sendATCommand(uint8_t opcode, uint8_t id, char *data, uint8_t size);
 int8_t checkResponse();
+int8_t checkAcknowledgement();

@@ -21,7 +21,7 @@
 #include <avr/sleep.h>
 #include <avr/wdt.h>
 #include <string.h>
-#include <arduinoFFT.h> // TODO: Port to fixed point FFT library
+#include <arduinoFFT.h>
 
 // Device Libraries
 #include <Adafruit_CCS811.h>
@@ -62,10 +62,12 @@ void setupUSB() { }
 #define ERROR_CCS_INIT_FAIL  0x01
 #define ERROR_SD_INIT_FAIL   0x02
 #define ERROR_SD_OPEN_FAIL   0x03
+#define GENERAL_DEBUG        0x04
+#define ERROR_NO_ACK         0x05
 
 /* FFT */
-#define SAMPLES 64
-#define SAMPLING_FREQ 9500
+#define SAMPLES         64
+#define SAMPLING_FREQ   6100
 #define SAMPLING_PERIOD 1000000 / SAMPLING_FREQ
 
 /* HELPER FUNCTIONS */
@@ -85,7 +87,7 @@ DHT dht(DHT_DATA, DHT22);
 arduinoFFT FFT = arduinoFFT();
 
 /* GLOBALS */
-unsigned long microseconds;
+unsigned long t_start;
 File fd;
 bool sdBegan = false; // library complains if begin() called twice
 
@@ -179,6 +181,7 @@ int main(void)
 		eco2 = tvoc = h = t = fpeak = 0;
 		ret = readCCS(&eco2, &tvoc);
 		ret = readDHT(&h, &t);
+		
 		fpeak = readAudio(); 
 
 		// pack measurements
@@ -191,14 +194,20 @@ int main(void)
 		
 		// transmit packet via LoRa
 		// TODO: Back-off procedure
-		sendData(RXNODE, buf, buf_size);
+		if(sendData(RXNODE, buf, buf_size) != 1) {
+		 	debug_output(ERROR_NO_LORA);
+			trap_error();
+		}
+		if(checkAcknowledgement() != 1) {
+			debug_output(ERROR_NO_ACK);
+			trap_error();
+		}
 		
-		// TODO: when/what are we actually going to log?
 		// for now, write raw data packet to SD card for testing
 		fd = SD.open("test.bin", FILE_WRITE);
 		fd.write(buf, buf_size); // can view the raw bytes of test.bin from CLI with hexdump
 		fd.close();
-		
+				
 		// power off devices
 		digitalWrite(DEV_PWR, LOW);
 
@@ -309,16 +318,17 @@ bool initSD() {
  * computes the FFT of the sample, and returns the peak of the spectrum.
 */
 double readAudio() {
+	// TODO: Averaging/curve smoothing?
+	
 	double *vReal = (double*)malloc(sizeof(double)*SAMPLES);
 	double *vImag = (double*)malloc(sizeof(double)*SAMPLES);
 	
-	microseconds = micros(); // TODO: be robust to micros() overflow
 	for(int i=0; i<SAMPLES; i++)
 	{
+		t_start = micros();
 		vReal[i] = analogRead(MIC_FILTERED);
 		vImag[i] = 0;
-		while(micros() - microseconds < SAMPLING_PERIOD);
-		microseconds += SAMPLING_PERIOD;
+		while((unsigned long)(micros() - t_start) < SAMPLING_PERIOD);
 	}
 	
 	FFT.Windowing(vReal, SAMPLES, FFT_WIN_TYP_HAMMING, FFT_FORWARD);

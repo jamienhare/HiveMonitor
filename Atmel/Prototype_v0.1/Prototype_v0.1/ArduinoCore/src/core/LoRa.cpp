@@ -68,12 +68,25 @@ int8_t sendATCommand(uint8_t opcode, uint8_t id, char *data, uint8_t size) {
 }
 
 int8_t checkResponse() {
+	char rx[64];
 	delay(1000);
-	String rx = Serial.readString();
-	if(rx.indexOf("OK") >= 0) {
-		return 1;
+	int num = Serial.readBytesUntil('\n', rx, 64);
+	if(strstr(rx, "OK") == NULL) {
+		return -1;
 	}
 	else {
+		return 1;
+	}
+}
+
+int8_t checkAcknowledgement() {
+	char rx[64];
+	delay(5000);
+	Serial.readBytesUntil('\n', rx, 64);
+	if(strstr(rx, "GK") == NULL) {
 		return -1;
+	}
+	else {
+		return 1;
 	}
 }
