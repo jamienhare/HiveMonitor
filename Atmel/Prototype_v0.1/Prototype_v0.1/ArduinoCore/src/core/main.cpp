@@ -89,8 +89,8 @@ arduinoFFT FFT = arduinoFFT();
 /* GLOBALS */
 unsigned long t_start;
 File fd;
-bool sdBegan = false; // library complains if begin() called twice
-
+bool sdBegan = false;       // library complains if begin() called twice
+const int numReadings = 5;  // number of readings to take per wake-up cycle
 
 // Watchdog Timer ISR
 ISR (WDT_vect) {	
@@ -163,9 +163,9 @@ int main(void)
 	
     
 	/********** begin main program loop **********/
-	uint16_t eco2, tvoc;
-	float h, t;
-	double fpeak;
+	uint16_t eco2, tvoc, totalEco2, totalTvoc, numEco2Tvoc, numHT;
+	float h, t, totalH, totalT;
+	double fpeak, totalFpeak;
 	
 	size_t buf_size = 2*sizeof(uint16_t) + 2*sizeof(float) + 1*sizeof(double);
 	char *buf = (char*)malloc(buf_size);
@@ -179,10 +179,49 @@ int main(void)
 		// take measurements
 		// TODO: how should we handle invalid readings?
 		eco2 = tvoc = h = t = fpeak = 0;
-		ret = readCCS(&eco2, &tvoc);
-		ret = readDHT(&h, &t);
-		
-		fpeak = readAudio(); 
+		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0
+		numEco2Tvoc = numHT = numReadings;
+		for(int i = 0; i < numReadings; ++i) {
+			ret = readCCS(&eco2, &tvoc);
+			if(!ret) { 
+				ret = readCCS(&eco2, &tvoc) // try again
+				if(!ret) {
+					numEco2Tvoc -= 1; // discard
+				}
+				else {
+					totalEco2 += eco2;
+					totalTvoc += tvoc;
+				}
+			}
+			else {
+				totalEco2 += eco2;
+				totalTvoc += tvoc;
+			}
+
+			ret = readDHT(&h, &t);
+			if(!ret) {
+				ret = readDHT(&h, &t); // try again
+				if(!ret) {
+					numHT -= 1; // discard
+				}
+				else {
+					totalH += h;
+					totalT += t;
+				}
+			}
+			else {
+				totalH += h;
+				totalT += t;
+			}
+			totalFpeak += readAudio();
+		}
+
+		// average measurements
+		eco2 = totalEco2/numEco2Tvoc;
+		tvoc = totalTvoc/numEco2Tvoc;
+		h = totalH/numHT;
+		t = totalT/numHT;
+		fpeak = totalFpeak/numReadings;
 
 		// pack measurements
 		memset(buf, 0, buf_size);
