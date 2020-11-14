@@ -106,7 +106,7 @@ int main(void)
 
 	/********** begin setup **********/
 	
-	Serial.begin(115200);
+	Serial.begin(57600, SERIAL_8N1);
 	Serial.setTimeout(2000);
 	Serial.flush();
 
@@ -177,30 +177,32 @@ int main(void)
 		delay(1000);
 		
 		// take measurements
-		// TODO: how should we handle invalid readings?
 		eco2 = tvoc = h = t = fpeak = 0;
 		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0;
 		numEco2Tvoc = numHT = numReadings;
+		
 		for(int i = 0; i < numReadings; ++i) {
-			ret = readCCS(&eco2, &tvoc);
-			if(!ret) { 
-				numEco2Tvoc -= 1; // discard
-			}
-			else {
-				totalEco2 += eco2;
-				totalTvoc += tvoc;
-			}
+		    ret = readCCS(&eco2, &tvoc);
+		    if(!ret) { 
+			    numEco2Tvoc -= 1; // discard
+		    }
+		    else {
+		        totalEco2 += eco2;
+		        totalTvoc += tvoc;
+		    }
 
-			ret = readDHT(&h, &t);
-			if(!ret) {
-				numHT -= 1; // discard
-			}
-			else {
-				totalH += h;
-				totalT += t;
-			}
-			totalFpeak += readAudio();
-			delay(1000);
+		    ret = readDHT(&h, &t);
+		    if(!ret) {
+		        numHT -= 1; // discard
+		    }
+		    else {
+		        totalH += h;
+	            totalT += t;
+	        }
+			
+		    totalFpeak += readAudio();
+			
+		    delay(1000);
 		}
 
 		// average measurements
