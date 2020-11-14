@@ -179,19 +179,12 @@ int main(void)
 		// take measurements
 		// TODO: how should we handle invalid readings?
 		eco2 = tvoc = h = t = fpeak = 0;
-		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0
+		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0;
 		numEco2Tvoc = numHT = numReadings;
 		for(int i = 0; i < numReadings; ++i) {
 			ret = readCCS(&eco2, &tvoc);
 			if(!ret) { 
-				ret = readCCS(&eco2, &tvoc) // try again
-				if(!ret) {
-					numEco2Tvoc -= 1; // discard
-				}
-				else {
-					totalEco2 += eco2;
-					totalTvoc += tvoc;
-				}
+				numEco2Tvoc -= 1; // discard
 			}
 			else {
 				totalEco2 += eco2;
@@ -200,20 +193,14 @@ int main(void)
 
 			ret = readDHT(&h, &t);
 			if(!ret) {
-				ret = readDHT(&h, &t); // try again
-				if(!ret) {
-					numHT -= 1; // discard
-				}
-				else {
-					totalH += h;
-					totalT += t;
-				}
+				numHT -= 1; // discard
 			}
 			else {
 				totalH += h;
 				totalT += t;
 			}
 			totalFpeak += readAudio();
+			delay(1000);
 		}
 
 		// average measurements
@@ -316,8 +303,8 @@ bool readDHT(float *h, float *t) {
 		return false;
 	}
 	
-	*h = dht.readHumidity();
-	*t = dht.readTemperature();
+	*h = dht.readHumidity(true); // force a new reading
+	*t = dht.readTemperature(true); // force a new reading
 	if(isnan(*h) || isnan(*t)) {
 		// bad data read
 		return false;
