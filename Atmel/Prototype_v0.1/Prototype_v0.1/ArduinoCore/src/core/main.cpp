@@ -543,7 +543,7 @@ void gotosleep(uint8_t cycles) {
 		sleep_cpu();
 		// WDT ISR will return here 
 	}
-	
+
 	sleep_disable();
 	
 	init_wdt();
