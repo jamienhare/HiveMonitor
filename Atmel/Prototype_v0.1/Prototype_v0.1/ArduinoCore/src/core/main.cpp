@@ -79,6 +79,7 @@ double readAudio();
 void debug_output(uint8_t opcode);
 void trap_error();
 void flash_led(uint8_t pin);
+void init_wdt();
 void gotosleep(uint8_t cycles);
 
 /* DEVICES */
@@ -104,7 +105,9 @@ int main(void)
 	uint8_t ret;
 	
 	init();
-
+	init_wdt();
+	wdt_reset();
+	
 	/********** begin setup **********/
 	
 	Serial.begin(57600, SERIAL_8N1);
@@ -118,6 +121,7 @@ int main(void)
 	pinMode(DB3, OUTPUT);
 	pinMode(DB4, OUTPUT);
 	pinMode(ERROR_LED, OUTPUT);
+
 	/* Sensors */
 	pinMode(SD_CS, OUTPUT);
 	pinMode(SD_CD, INPUT);
@@ -128,18 +132,22 @@ int main(void)
 	pinMode(DEV_PWR, OUTPUT);
 	
 	analogReference(EXTERNAL); // use 1.8V on AREF pin for analog reference
+	
+	wdt_reset();
 
 	// make sure CCS Reset pin is high
 	digitalWrite(CCS_RESET, HIGH);
-
 	// power on devices for setup
 	digitalWrite(DEV_PWR, HIGH);
 	delay(2000);
+	
+	wdt_reset();
 
 	// flush any initial output from LoRa
 	while(Serial.available() > 0) {
 		Serial.read();
 		delay(100);
+		wdt_reset();
 	}
 	
 	// check for LoRa response
@@ -148,25 +156,38 @@ int main(void)
 		trap_error();
 	}
 	
+	wdt_reset();
+	
 	// no error checking, because this is saved in NVM anyway
 	setNetworkID(NETWORKID);
 	setNodeID(TXNODE);
+	
+	wdt_reset();
 	
 	// initialize CCS811
 	if(!ccs.begin()) {
 		debug_output(ERROR_CCS_INIT_FAIL);
 		trap_error();
 	}
+	
+	wdt_reset();
+	
 	while(!ccs.available());
+	
+	wdt_reset();
 	
 	// initialize DHT library
 	dht.begin();
+	
+	wdt_reset();
 	
 	// initialize SD card
 	if(!initSD()) {
 		debug_output(ERROR_SD_INIT_FAIL);
 		trap_error();
 	}
+	
+	wdt_reset();
 	
 	/********** end setup **********/
 	
@@ -178,19 +199,28 @@ int main(void)
 	size_t buf_size = 2*sizeof(uint16_t) + 2*sizeof(float) + 1*sizeof(double);
 	char *buf = (char*)malloc(buf_size);
 	
+	wdt_reset();
+	
 	for (;;) {
 		
 		// power devices and give time for power up
 		digitalWrite(DEV_PWR, HIGH);
 		delay(1000);
-
+		
+		wdt_reset();
+		
 		// initialize CCS and wait for data to be available
 		digitalWrite(CCS_RESET, HIGH);
 		if(!ccs.begin()) {
 			debug_output(ERROR_CCS_INIT_FAIL);
 			trap_error();
 		}
+		
+		wdt_reset();
+		
 		while(!ccs.available());
+		
+		wdt_reset();
 		
 		// take measurements
 		eco2 = tvoc = h = t = fpeak = 0;
@@ -198,6 +228,9 @@ int main(void)
 		numEco2Tvoc = numHT = NUMREADINGS;
 		
 		for(int i = 0; i < NUMREADINGS; ++i) {
+			
+			wdt_reset();
+			
 			ret = readCCS(&eco2, &tvoc);
 			if(!ret) { 
 				numEco2Tvoc -= 1; // discard
@@ -206,17 +239,23 @@ int main(void)
 				totalEco2 += eco2;
 				totalTvoc += tvoc;
 			}
+			
+			wdt_reset();
 
 			ret = readDHT(&h, &t);
 			if(!ret) {
-			numHT -= 1; // discard
+				numHT -= 1; // discard
 			}
 			else {
 				totalH += h;
 				totalT += t;
 			}
 			
+			wdt_reset();
+			
 			totalFpeak += readAudio();
+			
+			wdt_reset();
 			
 			delay(1000);
 		}
@@ -235,6 +274,8 @@ int main(void)
 		h = totalH/numHT;
 		t = totalT/numHT;
 		fpeak = totalFpeak/NUMREADINGS;
+		
+		wdt_reset();
 
 		// pack measurements
 		memset(buf, 0, buf_size);
@@ -244,24 +285,35 @@ int main(void)
 		memcpy(buf + sizeof(eco2) + sizeof(tvoc) + sizeof(h), &t, sizeof(t));
 		memcpy(buf + sizeof(eco2) + sizeof(tvoc) + sizeof(h) + sizeof(t), &fpeak, sizeof(fpeak));
 		
+		wdt_reset();
+		
 		// transmit packet via LoRa
 		bool sent = false;
 		for(int i = 0; i < MAXTXATTEMPTS; ++i) {
+			
+			wdt_reset();
+			
 			// transmit packet
 			ret = sendData(RXNODE, buf, buf_size);
 			if(ret != 1) {
 				// no response from LoRa chip, delay and retry
+				wdt_reset();
 				delay(3000);
 				continue;
 			}
+			
+			wdt_reset();
 
 			// wait for ACK from gateway
 			ret = checkAcknowledgement();
 			if(ret != 1) {
 				// no response from gateway, delay and retry
+				wdt_reset();
 				delay(3000);
-				continue
+				continue;
 			}
+			
+			wdt_reset();
 
 			// successfully transmitted!
 			sent = true;
@@ -273,6 +325,8 @@ int main(void)
 			trap_error();
 		}
 		
+		wdt_reset();
+		
 		// write raw data packet to SD card
 		fd = SD.open("test.bin", FILE_WRITE);
 		if(fd) {
@@ -283,6 +337,8 @@ int main(void)
 			debug_output(ERROR_SD_OPEN_FAIL);
 			trap_error();
 		}
+		
+		wdt_reset();
 		
 		// power off devices
 		digitalWrite(DEV_PWR, LOW);
@@ -431,6 +487,11 @@ void debug_output(uint8_t opcode) {
  * Sets the ERROR_LED high and loops forever
 */
 void trap_error() {
+	// pat watchdog, turn off devices to allow power cycle
+	wdt_reset();
+	digitalWrite(DEV_PWR, LOW);
+	
+	// flag error and wait for reset
 	digitalWrite(ERROR_LED, HIGH);
 	while(1);
 }
@@ -445,6 +506,20 @@ void flash_led(uint8_t pin) {
 		digitalWrite(pin, LOW);
 		delay(100);
 	}
+}
+
+/*
+ * Initializes watchdog timer for system reset
+*/
+void init_wdt(){
+	// clear reset flags
+	MCUSR = 0;
+	// allow changes to watchdog
+	WDTCSR = bit (WDCE) | bit (WDE);
+	// enable reset mode and set time interval
+	WDTCSR = bit (WDE) | bit(WDP3) | bit (WDP0); // set WDIE, 8 sec delay
+	// pat the dog
+	wdt_reset();
 }
 
 /*
@@ -466,10 +541,11 @@ void gotosleep(uint8_t cycles) {
 		wdt_reset();
 		// go to sleep!
 		sleep_cpu();
-		// WDT ISR will return here
+		// WDT ISR will return here 
 	}
 
-	// TODO: put watchdog into reset mode and enable!
+	sleep_disable();
 	
-	sleep_disable();	
+	init_wdt();
+	wdt_reset();	
 }
