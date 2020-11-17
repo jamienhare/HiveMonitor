@@ -345,7 +345,7 @@ bool readDHT(float *h, float *t) {
 	}
 	
 	*h = dht.readHumidity(true); // force a new reading
-	*t = dht.readTemperature(true); // force a new reading
+	*t = dht.readTemperature(false, true); // force a new reading
 	if(isnan(*h) || isnan(*t)) {
 		// bad data read
 		return false;
