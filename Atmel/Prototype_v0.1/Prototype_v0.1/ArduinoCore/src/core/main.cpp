@@ -220,7 +220,15 @@ int main(void)
 			
 			delay(1000);
 		}
-
+		
+		// prevent div by 0
+		if(!numHT) {
+			++numHT;
+		}
+		if(!numEco2Tvoc) {
+			++numEco2Tvoc;
+		}
+		
 		// average measurements
 		eco2 = totalEco2/numEco2Tvoc;
 		tvoc = totalTvoc/numEco2Tvoc;
