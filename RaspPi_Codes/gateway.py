@@ -18,6 +18,10 @@ def confirmedAWSMsgReceipt(client, userData, message):
 
     Callback confirming successful message receipt by AWS.
 
+    client - AWS client
+    userData - data returned by AWS on user (?)
+    message - details of message published to AWS
+
     """
     print("Received Message from AWS IoT Core")
     print("Topic: ", message.topic)
@@ -31,59 +35,65 @@ def confirmedLoRaMsgReceipt(deviceId):
     deviceId - id of device to send confirmation to.
 
     """
-    print("Entered funct")
     msg = "GK"
     myport.write("AT+SEND="+str(deviceId)+","+str(len(msg))+","+msg+"\r\n")
+    print("Sent aknowledgement")
     time.sleep(1)
 
 def parseSerialString():
     """
 
     Parses a serial message received from the LoRa and returns
-    a dictionary with information to upload to the database.
+    a payload to upload to the database.
 
     """
     # Test message
     # serialMsg = '+RCV=120,4,0123456789tl2,34,-45'
     
+    # read serial port
     serialMsg = myport.read(MAX_MESSAGE_SIZE)
     print(serialMsg)
-    parsedMsg = serialMsg.split(',')
+    
+    # parse
+    parsedMsg = serialMsg.split(',') # parse received LoRa message
     parsedMsg[0] = parsedMsg[0][5:] # remove +RCV=
-    size = len(parsedMsg)
+    size = len(parsedMsg) # packet size
     print(size)
-    if(size > 2):
+    
+    if(size > 2): # test message
         print(parsedMsg[2])
-    if(size == 5):
-        print(sys.getsizeof(parsedMsg[2]))
-        newMsg = unpack('HHfff', parsedMsg[2])
-        print(newMsg)
-        messageAWS = {}
-        messageAWS["id"] = str(parsedMsg[0])
-        messageAWS["deviceId"] = str(parsedMsg[0])
-        messageAWS["co2"] = newMsg[0]
-        messageAWS["tvoc"] = newMsg[1]
-        messageAWS["humidity"] = newMsg[2]
-        messageAWS["temp"] = newMsg[3]
-        messageAWS["freq"] = newMsg[4]
-        messageAWS["timeStamp"] = str(datetime.datetime.now())
-        messageAWS["createdAt"] = "2020-11-07T22:52:20.977Z" # static value for proper database upload
-        messageAWS["updatedAt"] = "2020-11-07T22:52:20.977Z" # static value for proper database upload
-        confirmedLoRaMsgReceipt(messageAWS["deviceId"])
-        # Publish sensor readings to AWS IoT Core
-        print("Completed message receipt")
-        myMQTTClient.publish(
-            topic="home/test",
-            QoS=1,
-            payload=json.dumps(messageAWS)
-        )
-        print("Got past publish")
+        return None # incorrect message size
+    
+    if(size == 5): # expected packet size
+        # parse bytes object
+        sensorData = unpack('HHfff', parsedMsg[2])
+        print(sensorData)
 
-def readAndSendData():
+        # populate payload
+        payload = {}
+        payload["id"] = str(parsedMsg[0])
+        payload["deviceId"] = str(parsedMsg[0])
+        payload["co2"] = sensorData[0]
+        payload["tvoc"] = sensorData[1]
+        payload["humidity"] = sensorData[2]
+        payload["temp"] = sensorData[3]
+        payload["freq"] = sensorData[4]
+        payload["timeStamp"] = str(datetime.datetime.now())
+        payload["createdAt"] = "2020-11-07T22:52:20.977Z" # static value for proper database upload
+        payload["updatedAt"] = "2020-11-07T22:52:20.977Z" # static value for proper database upload
+        
+        # send AK to node
+        confirmedLoRaMsgReceipt(payload["deviceId"])
+        
+        return payload 
+    
+    return None # incorrect messsage size
+        
+
+def configureAWS():
     """
 
-    Configures AWS, waits for data on the serial port, parses data, and sends to AWS.
-        
+    Configures AWS client
         
     """
 
@@ -104,24 +114,51 @@ def readAndSendData():
     myMQTTClient.configureConnectDisconnectTimeout(10) # 10 sec
     myMQTTClient.configureMQTTOperationTimeout(5) # 5 sec
 
+    # connect to client and subscribe to AWS topic
     logger.info("Connecting...")
     print("Initiating AWS IoT Core Topic...")
-
     myMQTTClient.connect()
-    myMQTTClient.subscribe("home/test",1,confirmedAWSMsgReceipt)
+    myMQTTClient.subscribe("home/test", 1, confirmedAWSMsgReceipt)
+    print("AWS connection successful")
+    return myMQTTClient
 
-    print("Got past connect")
-    
-    # Publish to the same topic in a loop forever
+def publishPayload(payload, client):
+    """
+
+    Publish payload to the "home/test" topic
+
+    """
+    client.publish(
+        topic="home/test",
+        QoS=1,
+        payload=json.dumps(payload)
+    )
+
+def readAndSentData(client):
+    """
+
+    Continually seeks serial data. Parses and publishes to AWS upon receipt.
+
+    """
     while True:
-        if(myport.in_waiting > 0):
-            parseSerialString()
+        if(myport.in_waiting > 0): # wait for incoming data
+            message = parseSerialString()
+            if(message != None):
+                publishPayload(message, client)
+            else:
+                # TODO: log error
+                print("Incorrent message size")
 
 def main():
     while True:
         try:
-            readAndSendData()
-        except:
+            myMQTTClient = configureAWS()
+            readAndSentData(myMQTTClient)
+        except KeyboardInterrupt:
+            return
+        except Exception as e:
+            # TODO: log error
+            print(e)
             continue
         
 if __name__ == '__main__':
