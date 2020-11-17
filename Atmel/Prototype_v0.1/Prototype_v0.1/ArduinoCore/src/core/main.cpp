@@ -90,7 +90,8 @@ arduinoFFT FFT = arduinoFFT();
 unsigned long t_start;
 File fd;
 bool sdBegan = false;       // library complains if begin() called twice
-const int numReadings = 5;  // number of readings to take per wake-up cycle
+#define NUMREADINGS     5
+#define MAXTXATTEMPTS   3
 
 // Watchdog Timer ISR
 ISR (WDT_vect) {	
@@ -127,7 +128,21 @@ int main(void)
 	pinMode(DEV_PWR, OUTPUT);
 	
 	analogReference(EXTERNAL); // use 1.8V on AREF pin for analog reference
+
+	// make sure CCS Reset pin is high
+	digitalWrite(CCS_RESET, HIGH);
+
+	// power on devices for setup
+	digitalWrite(DEV_PWR, HIGH);
+	delay(2000);
+
+	// flush any initial output from LoRa
+	while(Serial.available() > 0) {
+		Serial.read();
+		delay(100);
+	}
 	
+	// check for LoRa response
 	if(sendAT() == -1) {
 		debug_output(ERROR_NO_LORA);
 		trap_error();
@@ -137,31 +152,24 @@ int main(void)
 	setNetworkID(NETWORKID);
 	setNodeID(TXNODE);
 	
+	// initialize CCS811
 	if(!ccs.begin()) {
 		debug_output(ERROR_CCS_INIT_FAIL);
 		trap_error();
 	}
 	while(!ccs.available());
 	
+	// initialize DHT library
 	dht.begin();
 	
+	// initialize SD card
 	if(!initSD()) {
 		debug_output(ERROR_SD_INIT_FAIL);
-		trap_error();
-	}
-
-	fd = SD.open("test.bin", FILE_WRITE);
-	if(fd) {
-		fd.close(); // if file opened okay, close and continue
-	}
-	else {
-		debug_output(ERROR_SD_OPEN_FAIL);
 		trap_error();
 	}
 	
 	/********** end setup **********/
 	
-    
 	/********** begin main program loop **********/
 	uint16_t eco2, tvoc, totalEco2, totalTvoc, numEco2Tvoc, numHT;
 	float h, t, totalH, totalT;
@@ -175,34 +183,42 @@ int main(void)
 		// power devices and give time for power up
 		digitalWrite(DEV_PWR, HIGH);
 		delay(1000);
+
+		// initialize CCS and wait for data to be available
+		digitalWrite(CCS_RESET, HIGH);
+		if(!ccs.begin()) {
+			debug_output(ERROR_CCS_INIT_FAIL);
+			trap_error();
+		}
+		while(!ccs.available());
 		
 		// take measurements
 		eco2 = tvoc = h = t = fpeak = 0;
 		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0;
-		numEco2Tvoc = numHT = numReadings;
+		numEco2Tvoc = numHT = NUMREADINGS;
 		
-		for(int i = 0; i < numReadings; ++i) {
-		    ret = readCCS(&eco2, &tvoc);
-		    if(!ret) { 
-			    numEco2Tvoc -= 1; // discard
-		    }
-		    else {
-		        totalEco2 += eco2;
-		        totalTvoc += tvoc;
-		    }
+		for(int i = 0; i < NUMREADINGS; ++i) {
+			ret = readCCS(&eco2, &tvoc);
+			if(!ret) { 
+				numEco2Tvoc -= 1; // discard
+			}
+			else {
+				totalEco2 += eco2;
+				totalTvoc += tvoc;
+			}
 
-		    ret = readDHT(&h, &t);
-		    if(!ret) {
-		        numHT -= 1; // discard
-		    }
-		    else {
-		        totalH += h;
-	            totalT += t;
-	        }
+			ret = readDHT(&h, &t);
+			if(!ret) {
+			numHT -= 1; // discard
+			}
+			else {
+				totalH += h;
+				totalT += t;
+			}
 			
-		    totalFpeak += readAudio();
+			totalFpeak += readAudio();
 			
-		    delay(1000);
+			delay(1000);
 		}
 
 		// average measurements
@@ -210,7 +226,7 @@ int main(void)
 		tvoc = totalTvoc/numEco2Tvoc;
 		h = totalH/numHT;
 		t = totalT/numHT;
-		fpeak = totalFpeak/numReadings;
+		fpeak = totalFpeak/NUMREADINGS;
 
 		// pack measurements
 		memset(buf, 0, buf_size);
@@ -221,33 +237,56 @@ int main(void)
 		memcpy(buf + sizeof(eco2) + sizeof(tvoc) + sizeof(h) + sizeof(t), &fpeak, sizeof(fpeak));
 		
 		// transmit packet via LoRa
-		// TODO: Back-off procedure
-		if(sendData(RXNODE, buf, buf_size) != 1) {
-		 	debug_output(ERROR_NO_LORA);
-			trap_error();
+		bool sent = false;
+		for(int i = 0; i < MAXTXATTEMPTS; ++i) {
+			// transmit packet
+			ret = sendData(RXNODE, buf, buf_size);
+			if(ret != 1) {
+				// no response from LoRa chip, delay and retry
+				delay(3000);
+				continue;
+			}
+
+			// wait for ACK from gateway
+			ret = checkAcknowledgement();
+			if(ret != 1) {
+				// no response from gateway, delay and retry
+				delay(3000);
+				continue
+			}
+
+			// successfully transmitted!
+			sent = true;
+			break;
 		}
-		if(checkAcknowledgement() != 1) {
+
+		if(!sent) {
 			debug_output(ERROR_NO_ACK);
 			trap_error();
 		}
 		
-		// for now, write raw data packet to SD card for testing
+		// write raw data packet to SD card
 		fd = SD.open("test.bin", FILE_WRITE);
-		fd.write(buf, buf_size); // can view the raw bytes of test.bin from CLI with hexdump
-		fd.close();
-				
+		if(fd) {
+			fd.write(buf, buf_size);
+			fd.close();
+		}
+		else {
+			debug_output(ERROR_SD_OPEN_FAIL);
+			trap_error();
+		}
+		
 		// power off devices
 		digitalWrite(DEV_PWR, LOW);
 
 		// sleep until next measurement
-		// TODO: modify for true measurement frequency
 		gotosleep(1);
 	}
 	
 	free(buf);
 	
 	/********** end main program loop **********/
-        
+
 	return 0;
 }
 
@@ -421,6 +460,8 @@ void gotosleep(uint8_t cycles) {
 		sleep_cpu();
 		// WDT ISR will return here
 	}
+
+	// TODO: put watchdog into reset mode and enable!
 	
 	sleep_disable();	
 }
