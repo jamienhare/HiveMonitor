@@ -92,6 +92,7 @@ unsigned long t_start;
 File fd;
 bool sdBegan = false;       // library complains if begin() called twice
 #define NUMREADINGS     5
+#define NUMAUDIOREADINGS 10
 #define MAXTXATTEMPTS   3
 
 // Watchdog Timer ISR
@@ -259,6 +260,13 @@ int main(void)
 			
 			delay(1000);
 		}
+		
+		// take audio samples for additional smoothing
+		for(int i = 0; i < NUMAUDIOREADINGS; ++i) {
+			totalFpeak += readAudio(); 
+		}
+		
+		// TODO: add removal of outliers
 		
 		// prevent div by 0
 		if(!numHT) {
