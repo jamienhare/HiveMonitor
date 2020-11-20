@@ -23,6 +23,7 @@
 #include <avr/power.h>
 #include <string.h>
 #include <arduinoFFT.h>
+#include <FreeStack.h>
 
 // Device Libraries
 #include <Adafruit_CCS811.h>
@@ -68,14 +69,14 @@ void setupUSB() { }
 #define ERROR_NO_ACK         0x05
 
 /* FFT */
-#define SAMPLES         64
+#define SAMPLES         128
 #define SAMPLING_FREQ   6100
 #define SAMPLING_PERIOD 1000000 / SAMPLING_FREQ
 
 /* HELPER FUNCTIONS */
 bool readCCS(uint16_t*, uint16_t*);
 bool readDHT(float*, float*);
-bool initSD();
+bool logSD(char*, int);
 double readAudio();
 
 void debug_output(uint8_t opcode);
@@ -88,11 +89,9 @@ void gotosleep(uint8_t cycles);
 Adafruit_CCS811 ccs;
 DHT dht(DHT_DATA, DHT22);
 arduinoFFT FFT = arduinoFFT();
-SdFat sd;
 
 /* GLOBALS */
 unsigned long t_start;
-SdFile fd;
 #define NUMREADINGS     5
 #define NUMAUDIOREADINGS 10
 #define MAXTXATTEMPTS   3
@@ -188,13 +187,13 @@ int main(void)
 	dht.begin();
 	
 	wdt_reset();
-	
-	// initialize SD card
-	if(!initSD()) {
-		debug_output(ERROR_SD_INIT_FAIL);
-		trap_error();
+
+	// check that an SD card is present
+	if(!digitalRead(SD_CD)) {
+		// TODO: What do we do if there is no SD card?
+		while(!digitalRead(SD_CD));
+		delay(250);
 	}
-	fd.open("TESTING.TXT", O_CREAT | O_WRITE | O_APPEND);
 	
 	wdt_reset();
 	
@@ -361,17 +360,15 @@ int main(void)
 		
 		wdt_reset();
 		
-		if(sd.begin(SD_CS)) {
-			fd.open("DATALOG.BIN", O_CREAT | O_WRITE | O_APPEND);
-			fd.write(buf, buf_size);
-			fd.close();
+		ret = logSD(buf, buf_size);
+		if(!ret) {
+			debug_output(ERROR_SD_INIT_FAIL);
+			trap_error();
 		}
 		
 		wdt_reset();
 		
 		// power off devices
-		fd.sync();
-
 		power_spi_disable();
 		pinMode(13, INPUT);
 		pinMode(12, INPUT);
@@ -383,7 +380,7 @@ int main(void)
 		pinMode(SD_CS, INPUT);
 
 		// sleep until next measurement
-		gotosleep(4);
+		gotosleep(1);
 
 		// reconnect pins
 		pinMode(SD_CS, OUTPUT);
@@ -470,22 +467,24 @@ bool readDHT(float *h, float *t) {
 }
 
 /*
- * Initializes an SD card. Waits indefinitely if no card is detected.
+ * Initializes an SD card and writes size bytes from buf to a file.
  *
  * REQUIRES: Card detect pin has been set to mode INPUT.
  * RETURNS:  true if card initialization succeeded, false otherwise.
 */
-bool initSD() {
-	
-	// check for a card
-	if(!digitalRead(SD_CD)) {
-		// TODO: What do we do if there is no SD card?
-		while(!digitalRead(SD_CD));
-		delay(250);
+bool logSD(char *buf, int size) {
+	SdFat sd;
+	SdFile fd;
+
+	if(sd.begin(SD_CS)) {
+		fd.open("DATALOG.BIN", O_CREAT | O_WRITE | O_APPEND);
+		fd.write(buf, size);
+		fd.close();
+		return true;
 	}
-
-	return sd.begin(SD_CS);
-
+	else {
+		return false;
+	}
 }
 
 /*
