@@ -317,7 +317,6 @@ int main(void)
 			wdt_reset();
 
 			// wait for ACK from gateway
-			/*
 			ret = checkAcknowledgement();
 			if(ret != 1) {
 				// no response from gateway, delay and retry
@@ -325,7 +324,6 @@ int main(void)
 				delay(3000);
 				continue;
 			}
-			*/
 			
 			wdt_reset();
 
