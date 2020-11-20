@@ -5,7 +5,9 @@ Date: 11/19/2020
 
 """
 import datetime
-from gateway import configureAWS, publishPayload
+import sys
+sys.path.insert(1, "/Users/gillianminnehan/Documents/umich/eecs473/aws-iot-core/RaspPi_Codes")
+from gatewayMain import configureAWS, publishPayload
 
 def main():
     myMQTTClient = configureAWS("home/boot")
