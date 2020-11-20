@@ -136,6 +136,9 @@ int main(void)
 	
 	analogReference(EXTERNAL); // use 1.8V on AREF pin for analog reference
 
+	// Seed random number generator with random noise from unconnected pin A2
+	randomSeed(analogRead(A2));
+
 	flash_led(ERROR_LED);
 	
 	wdt_reset();
@@ -315,10 +318,16 @@ int main(void)
 			// transmit packet
 			ret = sendData(RXNODE, buf, buf_size);
 			if(ret != 1) {
-				// no response from LoRa chip, delay and retry
-				wdt_reset();
-				delay(3000);
-				continue;
+				if(i + 1 == MAXTXATTEMPTS) {
+					// this was the last try, so give up
+					break;
+				}
+				else {
+					// no response from LoRa chip, delay random amount of time (0-5 sec) and retry
+					wdt_reset();
+					delay(1000 * random(6));
+					continue;
+				}
 			}
 			
 			wdt_reset();
@@ -326,10 +335,16 @@ int main(void)
 			// wait for ACK from gateway
 			ret = checkAcknowledgement();
 			if(ret != 1) {
-				// no response from gateway, delay and retry
-				wdt_reset();
-				delay(3000);
-				continue;
+				if(i + 1 == MAXTXATTEMPTS) {
+					// this was the last try, so give up
+					break;
+				}
+				else {
+					// no response from gateway, delay random amount of time (0-5 sec) and retry
+					wdt_reset();
+					delay(1000 * random(6));
+					continue;
+				}
 			}
 			
 			wdt_reset();
