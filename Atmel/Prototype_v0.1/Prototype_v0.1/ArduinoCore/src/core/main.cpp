@@ -217,6 +217,13 @@ int main(void)
 		delay(2000);
 		
 		wdt_reset();
+
+		// flush any initial output from LoRa
+		while(Serial.available() > 0) {
+			Serial.read();
+			delay(100);
+			wdt_reset();
+		}
 		
 		// initialize CCS and wait for data to be available
 		digitalWrite(CCS_RESET, HIGH);
