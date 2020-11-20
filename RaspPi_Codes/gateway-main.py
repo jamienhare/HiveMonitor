@@ -1,3 +1,10 @@
+"""
+
+Author: Gillian Minnehan
+Date: 11/19/2020
+
+"""
+
 import boto3
 import sys
 import json
@@ -9,6 +16,7 @@ import serial
 from struct import *
 from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 
+# Globals
 MAX_MESSAGE_SIZE = 50 
 myport = serial.Serial("/dev/ttyS0", 115200, timeout = 0.1)
 myport.flush()
@@ -60,6 +68,10 @@ def parseSerialString():
     size = len(parsedMsg) # packet size
     print(size)
     
+    if(size > 2): # test message
+        print(parsedMsg[2])
+        return None # incorrect message size
+    
     if(size == 5): # expected packet size
         # parse bytes object
         sensorData = unpack('HHfff', parsedMsg[2])
@@ -83,7 +95,7 @@ def parseSerialString():
         
         return payload 
     
-    return {} # incorrect messsage size
+    return None # incorrect messsage size
         
 
 def configureAWS():
@@ -102,7 +114,7 @@ def configureAWS():
     
     # For TLS mutual authentication
     myMQTTClient.configureEndpoint("a1r5j3v9sjm0wn-ats.iot.us-east-2.amazonaws.com", 8883) #AWS IoT Core endpoint
-    myMQTTClient.configureCredentials("/home/pi/Documents/hiveMonitor/RaspPi_Codes/root-ca.pem", "/home/pi/Documents/hiveMonitor/RaspPi_Codes/private.pem.key", "/home/pi/Documents/hiveMonitor/RaspPi_Codes/certificate.pem.crt") #Set path for Root CA and unique device credentials (use the private key and certificate retrieved from the logs in Step 1)
+    myMQTTClient.configureCredentials("/home/pi/Documents/eecs473/root-ca.pem", "/home/pi/Documents/eecs473/private.pem.key", "/home/pi/Documents/eecs473/certificate.pem.crt") #Set path for Root CA and unique device credentials (use the private key and certificate retrieved from the logs in Step 1)
 
     # Connect to AWS IoT Core
     myMQTTClient.configureOfflinePublishQueueing(-1) # Infinite offline publish queing
@@ -139,9 +151,11 @@ def readAndSentData(client):
     while True:
         if(myport.in_waiting > 0): # wait for incoming data
             message = parseSerialString()
-            if(bool(message)):
+            if(message != None):
                 publishPayload(message, client)
-                
+            else:
+                # TODO: log error
+                print("Incorrent message size")
 
 def main():
     while True:
