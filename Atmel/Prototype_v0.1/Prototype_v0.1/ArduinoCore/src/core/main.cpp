@@ -347,8 +347,8 @@ int main(void)
 		wdt_reset();
 		
 		if(sd.begin(SD_CS)) {
-			fd.open("FULLTEST.TXT", O_CREAT | O_WRITE | O_APPEND);
-			fd.write("Hello World!\n");
+			fd.open("DATALOG.BIN", O_CREAT | O_WRITE | O_APPEND);
+			fd.write(buf, buf_size);
 			fd.close();
 		}
 		
