@@ -254,10 +254,6 @@ int main(void)
 			
 			wdt_reset();
 			
-			totalFpeak += readAudio();
-			
-			wdt_reset();
-			
 			delay(1000);
 		}
 		
@@ -281,7 +277,7 @@ int main(void)
 		tvoc = totalTvoc/numEco2Tvoc;
 		h = totalH/numHT;
 		t = totalT/numHT;
-		fpeak = totalFpeak/NUMREADINGS;
+		fpeak = totalFpeak/NUMAUDIOREADINGS;
 		
 		wdt_reset();
 
