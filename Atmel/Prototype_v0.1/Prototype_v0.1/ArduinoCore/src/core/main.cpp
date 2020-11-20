@@ -20,14 +20,16 @@
 #include <Arduino.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
+#include <avr/power.h>
 #include <string.h>
 #include <arduinoFFT.h>
 
 // Device Libraries
 #include <Adafruit_CCS811.h>
 #include <DHT.h>
-#include <SD.h>
 #include <LoRa.h>
+#include <SPI.h>
+#include <SdFat.h>
 
 // Declared weak in Arduino.h to allow user redefinitions.
 int atexit(void (* /*func*/ )()) { return 0; }
@@ -39,7 +41,7 @@ void initVariant() { }
 
 void setupUSB() __attribute__((weak));
 void setupUSB() { }
-	
+
 /* PINS */
 // Debug Signals
 #define DB1            6  // PD6
@@ -86,11 +88,11 @@ void gotosleep(uint8_t cycles);
 Adafruit_CCS811 ccs;
 DHT dht(DHT_DATA, DHT22);
 arduinoFFT FFT = arduinoFFT();
+SdFat sd;
 
 /* GLOBALS */
 unsigned long t_start;
-File fd;
-bool sdBegan = false;       // library complains if begin() called twice
+SdFile fd;
 #define NUMREADINGS     5
 #define NUMAUDIOREADINGS 10
 #define MAXTXATTEMPTS   3
@@ -133,6 +135,8 @@ int main(void)
 	pinMode(DEV_PWR, OUTPUT);
 	
 	analogReference(EXTERNAL); // use 1.8V on AREF pin for analog reference
+
+	flash_led(ERROR_LED);
 	
 	wdt_reset();
 
@@ -187,6 +191,7 @@ int main(void)
 		debug_output(ERROR_SD_INIT_FAIL);
 		trap_error();
 	}
+	fd.open("TESTING.TXT", O_CREAT | O_WRITE | O_APPEND);
 	
 	wdt_reset();
 	
@@ -206,7 +211,10 @@ int main(void)
 		
 		// power devices and give time for power up
 		digitalWrite(DEV_PWR, HIGH);
-		delay(1000);
+		
+		wdt_reset();
+		
+		delay(2000);
 		
 		wdt_reset();
 		
@@ -309,6 +317,7 @@ int main(void)
 			wdt_reset();
 
 			// wait for ACK from gateway
+			/*
 			ret = checkAcknowledgement();
 			if(ret != 1) {
 				// no response from gateway, delay and retry
@@ -316,6 +325,7 @@ int main(void)
 				delay(3000);
 				continue;
 			}
+			*/
 			
 			wdt_reset();
 
@@ -331,24 +341,41 @@ int main(void)
 		
 		wdt_reset();
 		
-		// write raw data packet to SD card
-		fd = SD.open("test.bin", FILE_WRITE);
-		if(fd) {
-			fd.write(buf, buf_size);
+		if(sd.begin(SD_CS)) {
+			fd.open("FULLTEST.TXT", O_CREAT | O_WRITE | O_APPEND);
+			fd.write("Hello World!\n");
 			fd.close();
-		}
-		else {
-			debug_output(ERROR_SD_OPEN_FAIL);
-			trap_error();
 		}
 		
 		wdt_reset();
 		
 		// power off devices
+		fd.sync();
+
+		power_spi_disable();
+		pinMode(13, INPUT);
+		pinMode(12, INPUT);
+		pinMode(11, INPUT);
+
 		digitalWrite(DEV_PWR, LOW);
 
+		pinMode(CCS_RESET, INPUT);
+		pinMode(SD_CS, INPUT);
+
 		// sleep until next measurement
-		gotosleep(1);
+		gotosleep(4);
+
+		// reconnect pins
+		pinMode(SD_CS, OUTPUT);
+		pinMode(CCS_RESET, OUTPUT);
+
+		pinMode(13, OUTPUT);
+		pinMode(12, OUTPUT);
+		pinMode(11, OUTPUT);
+		power_spi_enable();
+
+		// MAGIC DELAY DO NOT TOUCH
+		delay(100);
 	}
 	
 	free(buf);
@@ -436,16 +463,9 @@ bool initSD() {
 		while(!digitalRead(SD_CD));
 		delay(250);
 	}
-	
-	// begin() returns false no matter what if not the first call
-	if(!SD.begin(SD_CS) && !sdBegan) {
-		return false;
-	}
-	else {
-		sdBegan = true;
-	}
-	
-	return true;
+
+	return sd.begin(SD_CS);
+
 }
 
 /*

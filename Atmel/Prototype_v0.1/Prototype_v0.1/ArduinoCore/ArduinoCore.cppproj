@@ -96,6 +96,18 @@
             <Value>..\include\libraries\SD\src\utility</Value>
             <Value>..\include\libraries\SPI\src</Value>
             <Value>..\include\libraries\arduinoFFT\src</Value>
+            <Value>..\include\libraries\SdFat\examples\AnalogBinLogger</Value>
+            <Value>..\include\libraries\SdFat\examples\LowLatencyLogger</Value>
+            <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerADXL345</Value>
+            <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerMPU6050</Value>
+            <Value>..\include\libraries\SdFat\extras\AnalogBinLoggerExtras\bintocsv</Value>
+            <Value>..\include\libraries\SdFat\extras\MainPage</Value>
+            <Value>..\include\libraries\SdFat\extras\SdFatTestSuite</Value>
+            <Value>..\include\libraries\SdFat\src</Value>
+            <Value>..\include\libraries\SdFat\src\FatLib</Value>
+            <Value>..\include\libraries\SdFat\src\SdCard</Value>
+            <Value>..\include\libraries\SdFat\src\SpiDriver</Value>
+            <Value>..\include\libraries\SdFat\src\SpiDriver\boards</Value>
           </ListValues>
         </avrgcc.compiler.directories.IncludePaths>
         <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
@@ -133,6 +145,18 @@
             <Value>..\include\libraries\SD\src\utility</Value>
             <Value>..\include\libraries\SPI\src</Value>
             <Value>..\include\libraries\arduinoFFT\src</Value>
+            <Value>..\include\libraries\SdFat\examples\AnalogBinLogger</Value>
+            <Value>..\include\libraries\SdFat\examples\LowLatencyLogger</Value>
+            <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerADXL345</Value>
+            <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerMPU6050</Value>
+            <Value>..\include\libraries\SdFat\extras\AnalogBinLoggerExtras\bintocsv</Value>
+            <Value>..\include\libraries\SdFat\extras\MainPage</Value>
+            <Value>..\include\libraries\SdFat\extras\SdFatTestSuite</Value>
+            <Value>..\include\libraries\SdFat\src</Value>
+            <Value>..\include\libraries\SdFat\src\FatLib</Value>
+            <Value>..\include\libraries\SdFat\src\SdCard</Value>
+            <Value>..\include\libraries\SdFat\src\SpiDriver</Value>
+            <Value>..\include\libraries\SdFat\src\SpiDriver\boards</Value>
           </ListValues>
         </avrgcccpp.compiler.directories.IncludePaths>
         <avrgcccpp.compiler.optimization.level>Optimize for size (-Os)</avrgcccpp.compiler.optimization.level>
@@ -193,10 +217,20 @@
       <Value>..\include\libraries\Wire\src</Value>
       <Value>..\include\libraries\Wire\src\utility</Value>
       <Value>..\include\libraries\Adafruit_Unified_Sensor</Value>
-      <Value>..\include\libraries\SD\src</Value>
-      <Value>..\include\libraries\SD\src\utility</Value>
       <Value>..\include\libraries\SPI\src</Value>
       <Value>..\include\libraries\arduinoFFT\src</Value>
+      <Value>..\include\libraries\SdFat\examples\AnalogBinLogger</Value>
+      <Value>..\include\libraries\SdFat\examples\LowLatencyLogger</Value>
+      <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerADXL345</Value>
+      <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerMPU6050</Value>
+      <Value>..\include\libraries\SdFat\extras\AnalogBinLoggerExtras\bintocsv</Value>
+      <Value>..\include\libraries\SdFat\extras\MainPage</Value>
+      <Value>..\include\libraries\SdFat\extras\SdFatTestSuite</Value>
+      <Value>..\include\libraries\SdFat\src</Value>
+      <Value>..\include\libraries\SdFat\src\FatLib</Value>
+      <Value>..\include\libraries\SdFat\src\SdCard</Value>
+      <Value>..\include\libraries\SdFat\src\SpiDriver</Value>
+      <Value>..\include\libraries\SdFat\src\SpiDriver\boards</Value>
     </ListValues>
   </avrgcc.compiler.directories.IncludePaths>
   <avrgcc.compiler.optimization.level>Optimize for size (-Os)</avrgcc.compiler.optimization.level>
@@ -230,10 +264,20 @@
       <Value>..\include\libraries\Wire\src</Value>
       <Value>..\include\libraries\Wire\src\utility</Value>
       <Value>..\include\libraries\Adafruit_Unified_Sensor</Value>
-      <Value>..\include\libraries\SD\src</Value>
-      <Value>..\include\libraries\SD\src\utility</Value>
       <Value>..\include\libraries\SPI\src</Value>
       <Value>..\include\libraries\arduinoFFT\src</Value>
+      <Value>..\include\libraries\SdFat\examples\AnalogBinLogger</Value>
+      <Value>..\include\libraries\SdFat\examples\LowLatencyLogger</Value>
+      <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerADXL345</Value>
+      <Value>..\include\libraries\SdFat\examples\LowLatencyLoggerMPU6050</Value>
+      <Value>..\include\libraries\SdFat\extras\AnalogBinLoggerExtras\bintocsv</Value>
+      <Value>..\include\libraries\SdFat\extras\MainPage</Value>
+      <Value>..\include\libraries\SdFat\extras\SdFatTestSuite</Value>
+      <Value>..\include\libraries\SdFat\src</Value>
+      <Value>..\include\libraries\SdFat\src\FatLib</Value>
+      <Value>..\include\libraries\SdFat\src\SdCard</Value>
+      <Value>..\include\libraries\SdFat\src\SpiDriver</Value>
+      <Value>..\include\libraries\SdFat\src\SpiDriver\boards</Value>
     </ListValues>
   </avrgcccpp.compiler.directories.IncludePaths>
   <avrgcccpp.compiler.optimization.level>Optimize for size (-Os)</avrgcccpp.compiler.optimization.level>
@@ -343,28 +387,130 @@
     <Compile Include="include\libraries\DHT_sensor_library\DHT_U.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\SD.h">
+    <Compile Include="include\libraries\SdFat\src\BlockDriver.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\utility\FatStructs.h">
+    <Compile Include="include\libraries\SdFat\src\FatLib\ArduinoFiles.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\utility\Sd2Card.h">
+    <Compile Include="include\libraries\SdFat\src\FatLib\ArduinoStream.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\utility\Sd2PinMap.h">
+    <Compile Include="include\libraries\SdFat\src\FatLib\BaseBlockDriver.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\utility\SdFat.h">
+    <Compile Include="include\libraries\SdFat\src\FatLib\bufstream.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\utility\SdFatmainpage.h">
+    <Compile Include="include\libraries\SdFat\src\FatLib\FatApiConstants.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\utility\SdFatUtil.h">
+    <Compile Include="include\libraries\SdFat\src\FatLib\FatFile.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\libraries\SD\src\utility\SdInfo.h">
+    <Compile Include="include\libraries\SdFat\src\FatLib\FatFileSystem.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\FatLib.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\FatLibConfig.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\FatStructs.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\FatVolume.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\FmtNumber.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\fstream.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\ios.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\iostream.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\istream.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\ostream.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FatLib\StdioStream.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\FreeStack.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\MinimumSerial.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SdCard\SdInfo.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SdCard\SdioCard.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SdCard\SdSpiCard.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SdFat.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SdFatConfig.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\sdios.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\AvrDevelopersGpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\BobuinoGpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\GpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\LeonardoGpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\MegaGpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\SleepingBeautyGpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\Standard1284GpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\Teensy2GpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\Teensy2ppGpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\boards\UnoGpioPinMap.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\DigitalPin.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\SdSpiBaseDriver.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\SdSpiDriver.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SpiDriver\SoftSPI.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\libraries\SdFat\src\SysCall.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\libraries\SPI\src\SPI.h">
@@ -472,19 +618,64 @@
     <Compile Include="src\libraries\DHT_sensor_library\DHT_U.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\libraries\SD\src\File.cpp">
+    <Compile Include="src\libraries\SdFat\src\FatLib\FatFile.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\libraries\SD\src\SD.cpp">
+    <Compile Include="src\libraries\SdFat\src\FatLib\FatFileLFN.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\libraries\SD\src\utility\Sd2Card.cpp">
+    <Compile Include="src\libraries\SdFat\src\FatLib\FatFilePrint.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\libraries\SD\src\utility\SdFile.cpp">
+    <Compile Include="src\libraries\SdFat\src\FatLib\FatFileSFN.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\libraries\SD\src\utility\SdVolume.cpp">
+    <Compile Include="src\libraries\SdFat\src\FatLib\FatVolume.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\FatLib\FmtNumber.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\FatLib\fstream.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\FatLib\istream.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\FatLib\ostream.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\FatLib\StdioStream.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\MinimumSerial.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SdCard\SdioCardEX.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SdCard\SdioTeensy.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SdCard\SdSpiCard.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SdCard\SdSpiCardEX.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SpiDriver\SdSpiESP8266.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SpiDriver\SdSpiParticle.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SpiDriver\SdSpiSAM3X.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SpiDriver\SdSpiSTM32.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\libraries\SdFat\src\SpiDriver\SdSpiTeensy3.cpp">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\libraries\SPI\src\SPI.cpp">
@@ -506,9 +697,12 @@
     <Folder Include="include\libraries\arduinoFFT\" />
     <Folder Include="include\libraries\arduinoFFT\src\" />
     <Folder Include="include\libraries\DHT_sensor_library\" />
-    <Folder Include="include\libraries\SD\" />
-    <Folder Include="include\libraries\SD\src\" />
-    <Folder Include="include\libraries\SD\src\utility\" />
+    <Folder Include="include\libraries\SdFat\" />
+    <Folder Include="include\libraries\SdFat\src\" />
+    <Folder Include="include\libraries\SdFat\src\FatLib\" />
+    <Folder Include="include\libraries\SdFat\src\SdCard\" />
+    <Folder Include="include\libraries\SdFat\src\SpiDriver\" />
+    <Folder Include="include\libraries\SdFat\src\SpiDriver\boards\" />
     <Folder Include="include\libraries\SPI\" />
     <Folder Include="include\libraries\SPI\src\" />
     <Folder Include="include\libraries\Wire\" />
@@ -525,9 +719,11 @@
     <Folder Include="src\libraries\arduinoFFT\" />
     <Folder Include="src\libraries\arduinoFFT\src\" />
     <Folder Include="src\libraries\DHT_sensor_library\" />
-    <Folder Include="src\libraries\SD\" />
-    <Folder Include="src\libraries\SD\src\" />
-    <Folder Include="src\libraries\SD\src\utility\" />
+    <Folder Include="src\libraries\SdFat\" />
+    <Folder Include="src\libraries\SdFat\src\" />
+    <Folder Include="src\libraries\SdFat\src\FatLib\" />
+    <Folder Include="src\libraries\SdFat\src\SdCard\" />
+    <Folder Include="src\libraries\SdFat\src\SpiDriver\" />
     <Folder Include="src\libraries\SPI\" />
     <Folder Include="src\libraries\SPI\src\" />
     <Folder Include="src\libraries\Wire\" />
