@@ -8,7 +8,7 @@ import datetime
 from gateway import configureAWS, publishPayload
 
 def main():
-    myMQTTClient = configureAWS()
+    myMQTTClient = configureAWS("home/boot")
     bootMsg = {}
     bootMsg["time"] = str(datetime.datetime.now())
     bootMsg["msg"] = "Confirmed boot"

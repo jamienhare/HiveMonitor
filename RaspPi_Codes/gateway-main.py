@@ -98,7 +98,7 @@ def parseSerialString():
     return None # incorrect messsage size
         
 
-def configureAWS():
+def configureAWS(topic):
     """
 
     Configures AWS client
@@ -126,7 +126,7 @@ def configureAWS():
     logger.info("Connecting...")
     print("Initiating AWS IoT Core Topic...")
     myMQTTClient.connect()
-    myMQTTClient.subscribe("home/test", 1, confirmedAWSMsgReceipt)
+    myMQTTClient.subscribe(topic, 1, confirmedAWSMsgReceipt)
     print("AWS connection successful")
     return myMQTTClient
 
@@ -160,7 +160,7 @@ def readAndSentData(client):
 def main():
     while True:
         try:
-            myMQTTClient = configureAWS()
+            myMQTTClient = configureAWS("home/test")
             readAndSentData(myMQTTClient)
         except KeyboardInterrupt:
             return
