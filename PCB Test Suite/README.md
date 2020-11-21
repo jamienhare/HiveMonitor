@@ -10,7 +10,7 @@ Blinks the error LED at 1 Hz, 50% duty cycle.
 
 ## 02_devpwr.elf
 
-Waits 3 seconds before turning on power to the peripherals. The device power LED should go on at this point. Waits another 2 seconds before blinking the error LED at 1 Hz, 50% duty cycle.
+**UPDATED 11/20/20:** Waits 3 seconds before turning on power to the peripherals. The device power LED should go on at this point. Waits another 2 seconds before blinking the error LED at 1 Hz, 50% duty cycle.
 
 ## 03_audio.elf
 
@@ -32,4 +32,8 @@ Turns on power to the peripherals and delays for 2 seconds. Initializes the SD c
 
 ## 07_ccs.elf
 
-Coming soon.
+Turns on power to the peripherals and delays for 2 seconds. Blinks the error LED at 1 Hz, 50% duty cycle. Takes CO2/TVOC samples from the CCS811 every second and prints them to Serial. View the output values using the same method as the audio and dht tests.
+
+## 08_devpwr_sleep.elf
+
+Same as the devpwr test except now the device goes to sleep for 8 seconds. After wake it delays for 2 seconds and turns peripheral power on. The device power LED should go on at this point. Waits another 2 seconds before flashing the LED once. Then, the device goes back into sleep mode.

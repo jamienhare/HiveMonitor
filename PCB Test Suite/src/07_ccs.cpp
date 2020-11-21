@@ -20,14 +20,17 @@
 #include <Arduino.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
+#include <avr/power.h>
 #include <string.h>
 #include <arduinoFFT.h>
+#include <FreeStack.h>
 
 // Device Libraries
 #include <Adafruit_CCS811.h>
 #include <DHT.h>
-#include <SD.h>
 #include <LoRa.h>
+#include <SPI.h>
+#include <SdFat.h>
 
 // Declared weak in Arduino.h to allow user redefinitions.
 int atexit(void (* /*func*/ )()) { return 0; }
@@ -39,7 +42,7 @@ void initVariant() { }
 
 void setupUSB() __attribute__((weak));
 void setupUSB() { }
-	
+
 /* PINS */
 // Debug Signals
 #define DB1            6  // PD6
@@ -64,23 +67,23 @@ void setupUSB() { }
 #define ERROR_SD_OPEN_FAIL   0x03
 #define GENERAL_DEBUG        0x04
 #define ERROR_NO_ACK         0x05
-#define ERROR_NO_CSS         0x06
-#define ERROR_NO_DHT         0x07
+#define ERROR_NO_CCS		 0x06
 
 /* FFT */
-#define SAMPLES         64
+#define SAMPLES         128
 #define SAMPLING_FREQ   6100
 #define SAMPLING_PERIOD 1000000 / SAMPLING_FREQ
 
 /* HELPER FUNCTIONS */
 bool readCCS(uint16_t*, uint16_t*);
 bool readDHT(float*, float*);
-bool initSD();
+bool logSD(char*, int);
 double readAudio();
 
 void debug_output(uint8_t opcode);
 void trap_error();
 void flash_led(uint8_t pin);
+void init_wdt();
 void gotosleep(uint8_t cycles);
 
 /* DEVICES */
@@ -90,9 +93,9 @@ arduinoFFT FFT = arduinoFFT();
 
 /* GLOBALS */
 unsigned long t_start;
-File fd;
-bool sdBegan = false;       // library complains if begin() called twice
-const int numReadings = 5;  // number of readings to take per wake-up cycle
+#define NUMREADINGS     5
+#define NUMAUDIOREADINGS 10
+#define MAXTXATTEMPTS   3
 
 // Watchdog Timer ISR
 ISR (WDT_vect) {	
@@ -105,7 +108,9 @@ int main(void)
 	uint8_t ret;
 	
 	init();
-
+	init_wdt();
+	wdt_reset();
+	
 	/********** begin setup **********/
 	
 	Serial.begin(57600, SERIAL_8N1);
@@ -119,6 +124,7 @@ int main(void)
 	pinMode(DB3, OUTPUT);
 	pinMode(DB4, OUTPUT);
 	pinMode(ERROR_LED, OUTPUT);
+
 	/* Sensors */
 	pinMode(SD_CS, OUTPUT);
 	pinMode(SD_CD, INPUT);
@@ -128,109 +134,99 @@ int main(void)
 	/* Power */
 	pinMode(DEV_PWR, OUTPUT);
 	
-	digitalWrite(CCS_RESET, HIGH);
-	digitalWrite(DEV_PWR, HIGH);
-	delay(1000);
 	analogReference(EXTERNAL); // use 1.8V on AREF pin for analog reference
+
+	// Seed random number generator with random noise from unconnected pin A2
+	randomSeed(analogRead(A2));
+
+	flash_led(ERROR_LED);	
+	
+	wdt_reset();
+
+	// make sure CCS Reset pin is high
+	digitalWrite(CCS_RESET, HIGH);
+	// power on devices for setup
+	digitalWrite(DEV_PWR, HIGH);
+	delay(2000);
+	
+	wdt_reset();
+	/*
+	// flush any initial output from LoRa
+	while(Serial.available() > 0) {
+		Serial.read();
+		delay(100);
+		wdt_reset();
+	}
+	
+	// check for LoRa response
+	if(sendAT() == -1) {
+		debug_output(ERROR_NO_LORA);
+		trap_error();
+	}
+	
+	wdt_reset();
+	
+	// no error checking, because this is saved in NVM anyway
+	setNetworkID(NETWORKID);
+	setNodeID(TXNODE);
+	
+	wdt_reset();
+	*/
+	// initialize CCS811
 	if(!ccs.begin()) {
 		debug_output(ERROR_CCS_INIT_FAIL);
 		trap_error();
 	}
+	
+	wdt_reset();
+	
 	while(!ccs.available());
 	
-	dht.begin();
+	wdt_reset();
 	
 	/********** end setup **********/
 	
-    
 	/********** begin main program loop **********/
-	uint16_t eco2, tvoc, totalEco2, totalTvoc, numEco2Tvoc;
-	float h, t, totalH, totalT, numHT;
+	uint16_t eco2, tvoc, totalEco2, totalTvoc, numEco2Tvoc, numHT;
+	float h, t, totalH, totalT;
 	double fpeak, totalFpeak;
 	
-	size_t buf_size = 2*sizeof(uint16_t) + 2*sizeof(float);
+	size_t buf_size = 2*sizeof(uint16_t) + 2*sizeof(float) + 1*sizeof(double);
 	char *buf = (char*)malloc(buf_size);
 	
+	wdt_reset();
+	
 	for (;;) {
-		// power devices and give time for power up
-		digitalWrite(DEV_PWR, HIGH);
-		delay(1000);
 		
-		// set reset high for CCS on each wake-up
-		digitalWrite(CCS_RESET, HIGH);
-		if(!ccs.begin()) {
-			debug_output(ERROR_CCS_INIT_FAIL);
-			trap_error();
+		digitalWrite(ERROR_LED, HIGH);
+		delay(500);
+		digitalWrite(ERROR_LED, LOW);
+		delay(500);
+		
+		wdt_reset();
+			
+		ret = readCCS(&eco2, &tvoc);
+		
+		if(!ret) {
+			debug_output(ERROR_NO_CCS);
+			Serial.println("No CCS");
+			numEco2Tvoc -= 1; // discard
+		}
+		else {
+			Serial.println("CCS Readings");
+			Serial.println(eco2);
+			Serial.println(tvoc);
+			totalEco2 += eco2;
+			totalTvoc += tvoc;
 		}
 		
-		// delay 10 seconds for CSS warm-up
-		delay(10000);
-		
-		// take measurements
-		eco2 = tvoc = h = t = fpeak = 0;
-		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0;
-		numEco2Tvoc = numHT = numReadings;
-		for(int i = 0; i < numReadings; ++i) {
-			ret = readCCS(&eco2, &tvoc);
-			if(!ret) {
-				debug_output(ERROR_NO_CSS);
-				Serial.println("No CSS");
-				numEco2Tvoc -= 1; // discard
-			}
-			else {
-				Serial.println("CCS Readings");
-				Serial.println(eco2);
-				Serial.println(tvoc);
-				totalEco2 += eco2;
-				totalTvoc += tvoc;
-			}
-			ret = readDHT(&h, &t);
-			delay(1000); // TODO: check if this is needed
-			if(!ret) {
-				debug_output(ERROR_NO_DHT);
-				Serial.println("No DHT");
-				numHT -= 1; // discard
-			}
-			else {
-				Serial.println("DHT readings");
-				Serial.println(h);
-				Serial.println(t);
-				totalH += h;
-				totalT += t;
-			}
-			delay(1000);
-		}
-		if(!numHT) {
-			++numHT;
-		}
-		if(!numEco2Tvoc) {
-			++numEco2Tvoc;
-		}
-		h = totalH/numHT;
-		t = totalT/numHT;
-		eco2 = totalEco2/numEco2Tvoc;
-		tvoc = totalTvoc/numEco2Tvoc;
-		Serial.println("Averages");
-		Serial.println(h);
-		Serial.println(t);
-		Serial.println(eco2);
-		Serial.println(tvoc);
-		
-		// let serial print statements finish
-		delay(1000);
-		
-		// power off devices
-		digitalWrite(DEV_PWR, LOW);
-
-		// sleep until next measurement
-		// TODO: modify for true measurement frequency
-		gotosleep(1);
+		wdt_reset();
 	}
 	
 	free(buf);
 	
 	/********** end main program loop **********/
-        
+
 	return 0;
 }
 
@@ -260,14 +256,12 @@ bool readCCS(uint16_t *eco2, uint16_t *tvoc) {
 			return true;
 		}
 		else {
-			Serial.println("Error in reading"); // sensor error
-			// add trap
-			// look for error code in the library
+			// sensor error
 			return false;
 		}
 	}
 	
-	Serial.println("No data to read"); // no data to read
+	// no data to read
 	return false;
 }
 
@@ -291,7 +285,7 @@ bool readDHT(float *h, float *t) {
 	}
 	
 	*h = dht.readHumidity(true); // force a new reading
-	*t = dht.readTemperature(true); // force a new reading
+	*t = dht.readTemperature();
 	if(isnan(*h) || isnan(*t)) {
 		// bad data read
 		return false;
@@ -301,29 +295,24 @@ bool readDHT(float *h, float *t) {
 }
 
 /*
- * Initializes an SD card. Waits indefinitely if no card is detected.
+ * Initializes an SD card and writes size bytes from buf to a file.
  *
  * REQUIRES: Card detect pin has been set to mode INPUT.
  * RETURNS:  true if card initialization succeeded, false otherwise.
 */
-bool initSD() {
-	
-	// check for a card
-	if(!digitalRead(SD_CD)) {
-		// TODO: What do we do if there is no SD card?
-		while(!digitalRead(SD_CD));
-		delay(250);
-	}
-	
-	// begin() returns false no matter what if not the first call
-	if(!SD.begin(SD_CS) && !sdBegan) {
-		return false;
+bool logSD(char *buf, int size) {
+	SdFat sd;
+	SdFile fd;
+
+	if(sd.begin(SD_CS)) {
+		fd.open("DATALOG.BIN", O_CREAT | O_WRITE | O_APPEND);
+		fd.write(buf, size);
+		fd.close();
+		return true;
 	}
 	else {
-		sdBegan = true;
+		return false;
 	}
-	
-	return true;
 }
 
 /*
@@ -369,6 +358,11 @@ void debug_output(uint8_t opcode) {
  * Sets the ERROR_LED high and loops forever
 */
 void trap_error() {
+	// pat watchdog, turn off devices to allow power cycle
+	wdt_reset();
+	digitalWrite(DEV_PWR, LOW);
+	
+	// flag error and wait for reset
 	digitalWrite(ERROR_LED, HIGH);
 	while(1);
 }
@@ -383,6 +377,20 @@ void flash_led(uint8_t pin) {
 		digitalWrite(pin, LOW);
 		delay(100);
 	}
+}
+
+/*
+ * Initializes watchdog timer for system reset
+*/
+void init_wdt(){
+	// clear reset flags
+	MCUSR = 0;
+	// allow changes to watchdog
+	WDTCSR = bit (WDCE) | bit (WDE);
+	// enable reset mode and set time interval
+	WDTCSR = bit (WDE) | bit(WDP3) | bit (WDP0); // set WDIE, 8 sec delay
+	// pat the dog
+	wdt_reset();
 }
 
 /*
@@ -404,8 +412,11 @@ void gotosleep(uint8_t cycles) {
 		wdt_reset();
 		// go to sleep!
 		sleep_cpu();
-		// WDT ISR will return here
+		// WDT ISR will return here 
 	}
+
+	sleep_disable();
 	
-	sleep_disable();	
+	init_wdt();
+	wdt_reset();	
 }
