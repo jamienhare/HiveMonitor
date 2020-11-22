@@ -215,7 +215,7 @@ int main(void)
 		power_spi_enable();
 
 		// MAGIC DELAY DO NOT TOUCH
-		delay(100);
+		delay(500);
 	}
 	
 	free(buf);
