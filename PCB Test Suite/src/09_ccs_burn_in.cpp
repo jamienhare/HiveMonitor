@@ -150,29 +150,11 @@ int main(void)
 	delay(2000);
 	
 	wdt_reset();
-	/*
-	// flush any initial output from LoRa
-	while(Serial.available() > 0) {
-		Serial.read();
-		delay(100);
-		wdt_reset();
-	}
 	
-	// check for LoRa response
-	if(sendAT() == -1) {
-		debug_output(ERROR_NO_LORA);
-		trap_error();
-	}
-	
-	wdt_reset();
-	
-	// no error checking, because this is saved in NVM anyway
-	setNetworkID(NETWORKID);
-	setNodeID(TXNODE);
-	
-	wdt_reset();
-	*/
 	// initialize CCS811
+	
+	wdt_reset();
+	
 	if(!ccs.begin()) {
 		debug_output(ERROR_CCS_INIT_FAIL);
 		trap_error();
@@ -180,7 +162,9 @@ int main(void)
 	
 	wdt_reset();
 	
-	while(!ccs.available());
+	while(!ccs.available()) {
+		wdt_reset();
+	}
 	
 	wdt_reset();
 	
@@ -198,78 +182,25 @@ int main(void)
 	
 	for (;;) {
 		
-		digitalWrite(ERROR_LED, HIGH);
-		delay(500);
-		digitalWrite(ERROR_LED, LOW);
-		delay(500);
-		
-		// power devices and give time for power up
-		digitalWrite(DEV_PWR, HIGH);
+		wdt_reset();
+			
+		ret = readCCS(&eco2, &tvoc);
 		
 		wdt_reset();
 		
-		delay(2000);
-		
-		wdt_reset();
-		
-		// initialize CCS and wait for data to be available
-		digitalWrite(CCS_RESET, HIGH);
-		if(!ccs.begin()) {
-			debug_output(ERROR_CCS_INIT_FAIL);
-			trap_error();
+		if(!ret) {
+			debug_output(ERROR_NO_CCS);
+			Serial.println("No CCS");
+		}
+		else {
+			Serial.println("CCS Readings");
+			Serial.println(eco2);
+			Serial.println(tvoc);
 		}
 		
-		wdt_reset();
-		
-		while(!ccs.available());
+		delay(1000);
 		
 		wdt_reset();
-		
-		for(int i = 0; i < 5; ++i) {
-			uint8_t error = ccs.read8(CCS811_ERROR_ID);
-			Serial.println(error);
-			
-			ret = readCCS(&eco2, &tvoc);
-			
-			if(!ret) {
-				debug_output(ERROR_NO_CCS);
-				Serial.println("No CCS");
-				numEco2Tvoc -= 1; // discard
-			}
-			else {
-				Serial.println("CCS Readings");
-				Serial.println(eco2);
-				Serial.println(tvoc);
-				totalEco2 += eco2;
-				totalTvoc += tvoc;
-			}
-			delay(1000);
-			
-			wdt_reset();
-		}	
-		
-		// power off devices
-		power_spi_disable();
-		pinMode(13, INPUT);
-		pinMode(12, INPUT);
-		pinMode(11, INPUT);
-
-		digitalWrite(DEV_PWR, LOW);
-
-		pinMode(CCS_RESET, INPUT);
-		pinMode(SD_CS, INPUT);
-
-		// sleep until next measurement
-		gotosleep(1);
-
-		// reconnect pins
-		pinMode(SD_CS, OUTPUT);
-		pinMode(CCS_RESET, OUTPUT);
-
-		pinMode(13, OUTPUT);
-		pinMode(12, OUTPUT);
-		pinMode(11, OUTPUT);
-		power_spi_enable();
 
 		// MAGIC DELAY DO NOT TOUCH
 		delay(100);

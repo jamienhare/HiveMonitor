@@ -26,14 +26,18 @@ Turns on power to the peripherals and delays for 2 seconds. Configures the ADDRE
 
 ## 06_sd.elf
 
-Turns on power to the peripherals and delays for 2 seconds. Initializes the SD card, opens a file called PCB_TEST.txt and writes "Hello World!" to it.
+**UPDATED 11/21/20:**Turns on power to the peripherals and delays for 2 seconds. Initializes the SD card, opens a file called PCB_TEST.txt and writes "Hello World!" to it.
 
 **IMPORTANT:** You cannot program the board while an SD card is inserted. To run this test, power on and program the board with the SD card **not** inserted. Then, power off the board, insert the SD card, and power the board on again.
 
-## 07_ccs.elf
+## 07_ccs_sleep.elf
 
 Turns on power to the peripherals and delays for 2 seconds. Blinks the error LED at 1 Hz, 50% duty cycle. Takes CO2/TVOC samples from the CCS811 every second and prints them to Serial. View the output values using the same method as the audio and dht tests.
 
 ## 08_devpwr_sleep.elf
 
 Same as the devpwr test except now the device goes to sleep for 8 seconds. After wake it delays for 2 seconds and turns peripheral power on. The device power LED should go on at this point. Waits another 2 seconds before flashing the LED once. Then, the device goes back into sleep mode.
+
+## 09_ccs_burn_in.elf
+
+Program intended for 48 hr burn in and verification of values without sleep. Turns on power to the peripherals and delays for 2 seconds. Takes CO2/TVOC samples from the CCS811 every second and prints them to Serial. View the output values using the same method as the audio and dht tests.
