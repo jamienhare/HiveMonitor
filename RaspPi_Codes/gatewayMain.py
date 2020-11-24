@@ -123,14 +123,14 @@ def configureAWS(topic):
     print("AWS connection successful")
     return myMQTTClient
 
-def publishPayload(payload, client):
+def publishPayload(topic, payload, client):
     """
 
-    Publish payload to the "home/test" topic
+    Publish payload to the speicified topic
 
     """
     client.publish(
-        topic="home/test",
+        topic=topic,
         QoS=1,
         payload=json.dumps(payload)
     )
