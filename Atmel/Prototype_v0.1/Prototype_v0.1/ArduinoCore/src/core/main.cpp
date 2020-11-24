@@ -94,7 +94,7 @@ arduinoFFT FFT = arduinoFFT();
 unsigned long t_start;
 #define NUMREADINGS     5
 #define NUMAUDIOREADINGS 10
-#define MAXTXATTEMPTS   3
+#define MAXTXATTEMPTS   12
 
 // Watchdog Timer ISR
 ISR (WDT_vect) {	
@@ -361,8 +361,8 @@ int main(void)
 		}
 
 		if(!sent) {
-			debug_output(ERROR_NO_ACK);
-			trap_error();
+			// debug_output(ERROR_NO_ACK);
+			// trap_error();
 		}
 		
 		wdt_reset();
@@ -387,7 +387,7 @@ int main(void)
 		pinMode(SD_CS, INPUT);
 
 		// sleep until next measurement
-		gotosleep(4);
+		gotosleep(150);
 
 		// reconnect pins
 		pinMode(SD_CS, OUTPUT);
