@@ -244,6 +244,13 @@ int main(void)
 		eco2 = tvoc = h = t = fpeak = 0;
 		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0;
 		numEco2Tvoc = numHT = NUMREADINGS;
+
+		// discard first CCS reading (always 400ppm)
+		readCCS(&eco2, &tvoc);
+		eco2 = tvoc = 0;
+		delay(1000);
+		
+		wdt_reset();
 		
 		for(int i = 0; i < NUMREADINGS; ++i) {
 			
@@ -380,7 +387,7 @@ int main(void)
 		pinMode(SD_CS, INPUT);
 
 		// sleep until next measurement
-		gotosleep(1);
+		gotosleep(4);
 
 		// reconnect pins
 		pinMode(SD_CS, OUTPUT);
@@ -392,7 +399,7 @@ int main(void)
 		power_spi_enable();
 
 		// MAGIC DELAY DO NOT TOUCH
-		delay(100);
+		delay(500);
 	}
 	
 	free(buf);
