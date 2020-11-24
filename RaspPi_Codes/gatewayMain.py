@@ -44,7 +44,7 @@ def confirmedLoRaMsgReceipt(deviceId):
 
     """
     msg = "GK"
-    myport.write("AT+SEND="+str(deviceId)+","+str(len(msg))+","+msg+"\r\n")
+    myport.write(bytes("AT+SEND="+str(deviceId)+","+str(len(msg))+","+msg+"\r\n", 'utf-8'))
     print("Sent aknowledgement")
     time.sleep(1)
 
@@ -63,24 +63,19 @@ def parseSerialString():
     print(serialMsg)
     
     # parse
-    parsedMsg = serialMsg.split(',') # parse received LoRa message
+    parsedMsg = serialMsg.split(b',') # parse received LoRa message
     parsedMsg[0] = parsedMsg[0][5:] # remove +RCV=
     size = len(parsedMsg) # packet size
     print(size)
-    
-    if(size > 2): # test message
-        print(parsedMsg[2])
-        return None # incorrect message size
-    
+    payload = {}
     if(size == 5): # expected packet size
         # parse bytes object
         sensorData = unpack('HHfff', parsedMsg[2])
         print(sensorData)
 
         # populate payload
-        payload = {}
-        payload["id"] = str(parsedMsg[0])
-        payload["deviceId"] = str(parsedMsg[0])
+        payload["id"] = str(parsedMsg[0], 'utf-8')
+        payload["deviceId"] = str(parsedMsg[0], 'utf-8')
         payload["co2"] = sensorData[0]
         payload["tvoc"] = sensorData[1]
         payload["humidity"] = sensorData[2]
@@ -92,10 +87,8 @@ def parseSerialString():
         
         # send AK to node
         confirmedLoRaMsgReceipt(payload["deviceId"])
-        
-        return payload 
     
-    return None # incorrect messsage size
+    return payload
         
 
 def configureAWS(topic):
@@ -114,7 +107,7 @@ def configureAWS(topic):
     
     # For TLS mutual authentication
     myMQTTClient.configureEndpoint("a1r5j3v9sjm0wn-ats.iot.us-east-2.amazonaws.com", 8883) #AWS IoT Core endpoint
-    myMQTTClient.configureCredentials("/home/pi/Documents/eecs473/root-ca.pem", "/home/pi/Documents/eecs473/private.pem.key", "/home/pi/Documents/eecs473/certificate.pem.crt") #Set path for Root CA and unique device credentials (use the private key and certificate retrieved from the logs in Step 1)
+    myMQTTClient.configureCredentials("/home/pi/Documents/hiveMonitor/RaspPi_Codes/root-ca.pem", "/home/pi/Documents/hiveMonitor/RaspPi_Codes/private.pem.key", "/home/pi/Documents/hiveMonitor/RaspPi_Codes/certificate.pem.crt") #Set path for Root CA and unique device credentials (use the private key and certificate retrieved from the logs in Step 1)
 
     # Connect to AWS IoT Core
     myMQTTClient.configureOfflinePublishQueueing(-1) # Infinite offline publish queing
@@ -130,14 +123,14 @@ def configureAWS(topic):
     print("AWS connection successful")
     return myMQTTClient
 
-def publishPayload(payload, client):
+def publishPayload(topic, payload, client):
     """
 
-    Publish payload to the "home/test" topic
+    Publish payload to the speicified topic
 
     """
     client.publish(
-        topic="home/test",
+        topic=topic,
         QoS=1,
         payload=json.dumps(payload)
     )
@@ -151,11 +144,8 @@ def readAndSentData(client):
     while True:
         if(myport.in_waiting > 0): # wait for incoming data
             message = parseSerialString()
-            if(message != None):
+            if(len(message)):
                 publishPayload(message, client)
-            else:
-                # TODO: log error
-                print("Incorrent message size")
 
 def main():
     while True:
