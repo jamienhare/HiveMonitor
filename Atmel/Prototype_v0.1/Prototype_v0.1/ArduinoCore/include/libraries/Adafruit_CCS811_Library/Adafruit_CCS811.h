@@ -118,7 +118,7 @@ public:
 
   bool checkError();
 
-private:
+//private:
   uint8_t _i2caddr;
   float _tempOffset;
 
