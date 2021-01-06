@@ -8,7 +8,7 @@
 #include <string.h>
 
 #define NETWORKID 6
-#define TXNODE    120
+#define TXNODE    121
 #define RXNODE    100
 
 // AT Message Opcodes

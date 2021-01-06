@@ -59,6 +59,8 @@ void setupUSB() { }
 #define CCS_RESET     A3  // PC3
 // Power
 #define DEV_PWR        3  // PD3
+// Baseline
+#define BASELINE_VAL 0xB37D
 
 /* Debug Codes */
 #define ERROR_NO_LORA        0x00
@@ -83,7 +85,8 @@ void debug_output(uint8_t opcode);
 void trap_error();
 void flash_led(uint8_t pin);
 void init_wdt();
-void gotosleep(uint8_t cycles, bool isGoingToSleep);
+void gotosleep(uint16_t cycles);
+void setBaseline();
 
 /* DEVICES */
 Adafruit_CCS811 ccs;
@@ -94,7 +97,7 @@ arduinoFFT FFT = arduinoFFT();
 unsigned long t_start;
 #define NUMREADINGS     5
 #define NUMAUDIOREADINGS 10
-#define MAXTXATTEMPTS   12
+#define MAXTXATTEMPTS   2
 
 // Watchdog Timer ISR
 ISR (WDT_vect) {	
@@ -210,9 +213,9 @@ int main(void)
 	wdt_reset();
 	
 	for (;;) {
-		
+		//flash_led(ERROR_LED);
 		// power devices and give time for power up
-		digitalWrite(DEV_PWR, HIGH);
+		//digitalWrite(DEV_PWR, HIGH);
 		
 		wdt_reset();
 		
@@ -241,18 +244,22 @@ int main(void)
 		totalEco2 = totalTvoc = totalH = totalT = totalFpeak = 0;
 		numEco2Tvoc = numHT = NUMREADINGS;
 		
-		gotosleep(150, false); // TODO: re-evaluate
+		//gotosleep(150);
 		
+		/*
 		// set known temperature and humidity values
 		ret = readDHT(&h, &t);
 		if(ret) { 
 			ccs.setEnvironmentalData(h,(double)t);
 		}
 		// TODO: what to do if we get an invalid DHT reading?
+		*/
 		
 		wdt_reset();
 		
-		// TODO: set baseline readings
+		//setBaseline(); // set baseline readings
+		
+		//wdt_reset();
 		
 		while(!ccs.available());
 		
@@ -374,8 +381,8 @@ int main(void)
 		}
 
 		if(!sent) {
-			// debug_output(ERROR_NO_ACK);
-			// trap_error();
+			debug_output(ERROR_NO_ACK);
+			trap_error();
 		}
 		
 		wdt_reset();
@@ -387,7 +394,7 @@ int main(void)
 		}
 		
 		wdt_reset();
-		
+		/*
 		// power off devices
 		power_spi_disable();
 		pinMode(13, INPUT);
@@ -400,7 +407,7 @@ int main(void)
 		pinMode(SD_CS, INPUT);
 
 		// sleep until next measurement
-		gotosleep(1, true);
+		gotosleep(1350);
 
 		// reconnect pins
 		pinMode(SD_CS, OUTPUT);
@@ -410,7 +417,7 @@ int main(void)
 		pinMode(12, OUTPUT);
 		pinMode(11, OUTPUT);
 		power_spi_enable();
-
+		*/
 		// MAGIC DELAY DO NOT TOUCH
 		delay(500);
 	}
@@ -425,29 +432,16 @@ int main(void)
 /*
  * Writes baseline air quality readings to the BASELINE register.
  *
- * eco2 - pointer to store eCO2 (ppm) value to write
- * tvoc - pointer to store TVOC (ppb) value to write
- *
  * REQUIRES: Device has been running for >20 minutes in non-idle mode.
 */
-void setBaseline(uint8_t *eco2, uint8_t *tvoc) {
+void setBaseline() {
 	size_t buf_size = 2*sizeof(uint8_t);
 	uint8_t *buf = (uint8_t *)malloc(buf_size);
 	
-	// perform set up write to BASELINE
-	ccs.write(CCS811_BASELINE, buf, 0);
-	
-	// get current baseline
-	ccs.read(CCS811_BASELINE, buf, 2);
-	
-	// figure out which is which
-	Serial.println(buf[0]);
-	Serial.println(buf[1]);
-	
 	// pack buf, change based on above results
 	memset(buf, 0, buf_size);
-	memcpy(buf, &eco2, sizeof(eco2));
-	memcpy(buf + sizeof(eco2), &tvoc, sizeof(tvoc));
+	buf[0] = BASELINE_VAL & 0xFF;
+	buf[1] = (BASELINE_VAL & 0xFF00) >> 8;
 	
 	// write baseline values
 	ccs.write(CCS811_BASELINE, buf, 2);
@@ -619,14 +613,12 @@ void init_wdt(){
 /*
  * Causes the processor to sleep for a specified number of 8 second cycles
 */
-void gotosleep(uint8_t cycles, bool isGoingToSleep) {
+void gotosleep(uint16_t cycles) {
 	
-	if(isGoingToSleep) {
-		set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-		sleep_enable();
-	}
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	sleep_enable();
 	
-	for(int i = 0; i < cycles; ++i) {
+	for(uint16_t i = 0; i < cycles; ++i) {
 		// clear reset flags
 		MCUSR = 0;
 		// allow changes to watchdog, disable reset mode
@@ -636,11 +628,11 @@ void gotosleep(uint8_t cycles, bool isGoingToSleep) {
 		// pat the dog
 		wdt_reset();
 		// go to sleep!
-		if(isGoingToSleep) { sleep_cpu(); }
+		sleep_cpu();
 		// WDT ISR will return here 
 	}
 
-	if(isGoingToSleep) { sleep_disable(); }
+	sleep_disable();
 	
 	init_wdt();
 	wdt_reset();	

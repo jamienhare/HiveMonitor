@@ -18,7 +18,7 @@ int sendData(unsigned int nodeID, char* message);
 void setup() 
 {
   int ret;
-  Serial.begin(115200);
+  Serial.begin(57600);
   Serial.setTimeout(2000);
   
   ret = sendAT();
@@ -51,6 +51,7 @@ int sendAT()
 {
   String rx = "";
   Serial.print("AT\r\n");
+  delay(1000);
   rx = Serial.readString();
   if(rx.indexOf("OK")>=0)
     return 1;
@@ -62,6 +63,7 @@ int setNetworkID(unsigned int ID)
 {
   String rx = "";
   Serial.print("AT+NETWORKID="+String(ID)+"\r\n");
+  delay(1000);
   rx = Serial.readString();
   if(rx.indexOf("OK")>=0)
     return 1;
@@ -73,6 +75,7 @@ int setNodeID(unsigned int ID)
 {
   String rx = "";
   Serial.print("AT+ADDRESS="+String(ID)+"\r\n");
+  delay(1000);
   rx = Serial.readString();
   if(rx.indexOf("OK")>=0)
     return 1;
@@ -85,6 +88,7 @@ int sendData(unsigned int ID, char* message)
   String rx = "";
   int l = (int)(strlen(message));
   Serial.print("AT+SEND="+String(ID)+","+String(l)+","+message+"\r\n");
+  delay(1000);
   rx = Serial.readString();
   if(rx.indexOf("OK")>=0)
     return 1;
